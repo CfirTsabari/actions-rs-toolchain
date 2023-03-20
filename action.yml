@@ -1,0 +1,79 @@
+name: "rustup toolchain.toml install"
+author: "@CfirTsabari"
+description: Install the Rust toolchain according to the toolchain.toml
+branding:
+  icon: activity
+  color: purple
+
+inputs:
+  toolchain-file:
+    description: A different path to rust-toolchain file
+    required: false
+    default: rust-toolchain.toml
+  targets:
+    description: Comma-separated list of target triples to install for this toolchain
+    required: false
+    
+  components:
+    description: Comma-separated list of components to be additionally installed
+    required: false
+
+outputs:
+  
+  cachekey:
+    description: A short hash of the rustc version, appropriate for use as a cache key. "20220627a831"
+    value: ${{ steps.rust-toolchain.outputs.cachekey }}
+  
+  name:
+    description: Rustup's name for the selected version of the toolchain. "1.62.0"  # suitable for use with `cargo +${{steps.toolchain.outputs.name}}`
+    value: ${{ steps.rust-toolchain.outputs.name }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: parse toml file
+      id: parse-toml
+      uses: CfirTsabari/actions-toml2json@v1.0.0
+      with:
+        toml-file-path: ${{ inputs.toolchain-file }}
+    - name: build args
+      id: args
+      run: |
+        # Init Variables
+        targets_files=${{ join(fromJson(steps.parse-toml.outputs.json-output).toolchain.targets) }}
+        targets_inputs=${{ inputs.targets }}
+        components_files=${{ join(fromJson(steps.parse-toml.outputs.json-output).toolchain.components) }}
+        components_inputs=${{ inputs.components }}
+
+        # Define a function to join two lists
+        function join_lists() {
+          # Get the two lists as arguments
+          list1="$1"
+          list2="$2"
+
+          # Join the two lists
+          if [[ -z "$list1" ]]; then
+            joined_list="$list2"
+          elif [[ -z "$list2" ]]; then
+            joined_list="$list1"
+          else
+            joined_list=$(echo "$list1,$list2" | tr ',' '\n' | sort | uniq | tr '\n' ',' | sed 's/,$//')
+          fi
+          
+          # Return the joined list
+          echo "$joined_list"
+        }
+
+        # print args
+        echo "targets=$(join_lists $targets_files $targets_inputs )" >> $GITHUB_OUTPUT 
+        echo "components=$(join_lists $components_files $components_inputs )" >> $GITHUB_OUTPUT 
+        echo "toolchain=${{ fromJson(steps.parse-toml.outputs.json-output).toolchain.channel }}" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: run install toolchain
+      id: rust-toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ steps.args.outputs.toolchain }}
+        components: ${{ steps.args.outputs.components }}
+        targets: ${{ steps.args.outputs.target }}
+

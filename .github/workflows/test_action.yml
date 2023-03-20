@@ -1,0 +1,118 @@
+name: Test actions-rs-toolchain action
+on:
+  workflow_call:
+jobs:
+  read_test_matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.tests-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: tests-matrix
+        run: |
+          tempMatrix=$(cat ${{ github.workspace }}/test_data/tests.json)
+          echo "matrix<<EOF" >> $GITHUB_OUTPUT
+          echo "$tempMatrix" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  run:
+    needs: read_test_matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.read_test_matrix.outputs.matrix) }}
+        
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Read test information windows
+        id: test-info-win
+        if: ${{ contains(matrix.os,'windows') }}
+        shell: pwsh
+        run: |
+          $tempInfo= Get-Content ${{ github.workspace }}\test_data\${{ matrix.test }}\test.json
+          echo "info<<EOF" >> $env:GITHUB_OUTPUT
+          echo "$tempInfo" >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
+      - name: Read test information Linux
+        if: ${{ ! contains(matrix.os,'windows') }}
+        id: test-info-linux
+        shell: bash
+        run: |
+          tempInfo=$(cat ${{ github.workspace }}/test_data/${{ matrix.test }}/test.json )
+          echo "info<<EOF" >> $GITHUB_OUTPUT
+          echo "$tempInfo" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Read test information
+        id: test-info
+        shell: bash
+        run: |
+          tempInfo='${{ steps.test-info-win.outputs.info || steps.test-info-linux.outputs.info }}'
+          echo $tempInfo
+          echo "info<<EOF" >> $GITHUB_OUTPUT
+          echo "$tempInfo" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      
+      - name: Install
+        id: toolchain 
+        uses: ./
+        with:
+          toolchain-file: ${{ github.workspace }}/test_data/${{ matrix.test }}/toolchain.toml
+          components: ${{ join(fromJson(steps.test-info.outputs.info).components) }}
+      
+      # check cargo version
+      - name: get cargo version 
+        id: cargo-version
+        shell: bash
+        run: echo "version=$(cargo +${{ steps.toolchain.outputs.name }} --version )" >> $GITHUB_OUTPUT
+      - name: validate cargo version 
+        if: ${{ steps.cargo-version.outputs.version != fromJson(steps.test-info.outputs.info).cargo-version }}
+        run: exit 1
+      
+      # check rustc version
+      - name: get rustc version 
+        id: rustc-version
+        shell: bash
+        run: echo "version=$(rustc +${{ steps.toolchain.outputs.name }} --version )" >> $GITHUB_OUTPUT
+      - name: validate rustc version 
+        if: ${{ steps.rustc-version.outputs.version != fromJson(steps.test-info.outputs.info).rustc-version }}
+        run: exit 1
+
+      # check rustfmt
+      - name: call cargo fmt
+        continue-on-error: true
+        run : cargo +${{ steps.toolchain.outputs.name }} fmt --version
+        id: check-rustfmt
+      - name: verify rustfmt is installed
+        if: ${{ steps.check-rustfmt.outcome == 'failure' && fromJson(steps.test-info.outputs.info).rustfmt-installed }}
+        run: exit 1
+      - name: verify rustfmt is not installed
+        if: ${{ steps.check-rustfmt.outcome == 'success' && !fromJson(steps.test-info.outputs.info).rustfmt-installed }}
+        run: exit 1
+      
+      # check clippy
+      - name: call cargo clippy
+        continue-on-error: true
+        run : cargo +${{ steps.toolchain.outputs.name }} clippy --version
+        id: check-clippy
+      - name: verify clippy is installed
+        if: ${{ steps.check-clippy.outcome == 'failure' && fromJson(steps.test-info.outputs.info).clippy-installed }}
+        run: exit 1
+      - name: verify clippy is not installed
+        if: ${{ steps.check-clippy.outcome == 'success' && !fromJson(steps.test-info.outputs.info).clippy-installed }}
+        run: exit 1
+
+
+      # check miri
+      - name: call cargo miri
+        continue-on-error: true
+        run : cargo +${{ steps.toolchain.outputs.name }} miri --version
+        id: check-miri
+      - name: verify miri is installed
+        if: ${{ steps.check-miri.outcome == 'failure' && fromJson(steps.test-info.outputs.info).miri-installed }}
+        run: exit 1
+      - name: verify miri is not installed
+        if: ${{ steps.check-miri.outcome == 'success' && !fromJson(steps.test-info.outputs.info).miri-installed }}
+        run: exit 1
+
+

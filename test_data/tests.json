@@ -1,0 +1,12 @@
+{
+    "os": ["ubuntu-22.04", "windows-2022", "macos-12"],
+    "test": ["sanity"],
+    "include":[
+        { "os": "ubuntu-22.04", "test": "test_1"},
+        { "os": "ubuntu-22.04", "test": "test_2"},
+        { "os": "ubuntu-22.04", "test": "test_3"},
+        { "os": "ubuntu-22.04", "test": "test_4"},
+        { "os": "ubuntu-22.04", "test": "test_5"},
+        { "os": "ubuntu-22.04", "test": "test_6"}
+    ]
+}
