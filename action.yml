@@ -75,5 +75,5 @@ runs:
       with:
         toolchain: ${{ steps.args.outputs.toolchain }}
         components: ${{ steps.args.outputs.components }}
-        targets: ${{ steps.args.outputs.target }}
+        targets: ${{ steps.args.outputs.targets }}
 
