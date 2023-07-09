@@ -1,6 +1,6 @@
 {
     "tool_chain_components_doc":["rustfmt"],
-    "components":[],
+    "components":"",
     "clippy-installed": false,
     "rustfmt-installed": true,
     "miri-installed": false,
