@@ -1,7 +1,10 @@
 {
     "os": ["ubuntu-22.04", "windows-2022", "macos-12"],
     "test": ["sanity"],
+    "default_file": [""],
     "include":[
+        { "test":"sanity", "os":"ubuntu-22.04", "default_file":"rust-toolchain.toml"},
+        { "test":"sanity", "os":"ubuntu-22.04", "default_file":"rust-toolchain"},
         { "os": "ubuntu-22.04", "test": "test_1"},
         { "os": "ubuntu-22.04", "test": "test_2"},
         { "os": "ubuntu-22.04", "test": "test_3"},

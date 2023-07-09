@@ -9,7 +9,6 @@ inputs:
   toolchain-file:
     description: A different path to rust-toolchain file
     required: false
-    default: rust-toolchain.toml
   targets:
     description: Comma-separated list of target triples to install for this toolchain
     required: false
@@ -31,11 +30,37 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: choose toolchain file to read
+      id: toolchain-file
+      shell: bash
+      env:
+        INPUT_FILE: ${{ inputs.toolchain-file }}
+      run: |
+        if [ -z "$INPUT_FILE" ]; then
+          if [ -f "rust-toolchain" ]; then
+            RUST_TOOLCHAIN_FILE="rust-toolchain"
+          elif [ -f "rust-toolchain.toml" ]; then
+            RUST_TOOLCHAIN_FILE="rust-toolchain.toml"
+          else
+            echo "::error title=Rust toolchain::couldn't find default toolchain file"
+            exit 1
+          fi
+        else
+          if [ -f "$INPUT_FILE" ]; then
+            RUST_TOOLCHAIN_FILE="$INPUT_FILE"
+          else
+            echo "::error title=Rust toolchain::provided file doesn't exist"
+            exit 1
+          fi
+        fi
+        echo "toolchain-file=$RUST_TOOLCHAIN_FILE" >> $GITHUB_OUTPUT
+
+
     - name: parse toml file
       id: parse-toml
       uses: CfirTsabari/actions-toml2json@v1.0.0
       with:
-        toml-file-path: ${{ inputs.toolchain-file }}
+        toml-file-path: ${{ steps.toolchain-file.outputs.toolchain-file }}
     - name: build args
       id: args
       run: |

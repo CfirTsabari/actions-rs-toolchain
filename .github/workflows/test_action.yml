@@ -14,6 +14,17 @@ jobs:
           echo "matrix<<EOF" >> $GITHUB_OUTPUT
           echo "$tempMatrix" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+  test-fail:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install
+        continue-on-error: true
+        id: toolchain 
+        uses: ./
+      - name: Verify install failed
+        if: ${{ steps.toolchain.outcome == 'success' }}
+        run: exit 1
 
   run:
     needs: read_test_matrix
@@ -51,13 +62,23 @@ jobs:
           echo "info<<EOF" >> $GITHUB_OUTPUT
           echo "$tempInfo" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+      - name: write toolchain to default location
+        id: toolchain-arg
+        env:
+          DEFAULT_FILE: ${{ matrix.default_file }}
+        shell: bash
+        run: |
+          if [ -z "$DEFAULT_FILE" ]; then
+            echo "toolchain=${{ github.workspace }}/test_data/${{ matrix.test }}/toolchain.toml" >> $GITHUB_OUTPUT
+          else
+            cp ${{ github.workspace }}/test_data/${{ matrix.test }}/toolchain.toml ${{ github.workspace }}/${{ matrix.default_file }} 
+          fi
 
-      
       - name: Install
         id: toolchain 
         uses: ./
         with:
-          toolchain-file: ${{ github.workspace }}/test_data/${{ matrix.test }}/toolchain.toml
+          toolchain-file: ${{ steps.toolchain-arg.outputs.toolchain }}
           components: ${{ join(fromJson(steps.test-info.outputs.info).components) }}
       
       # check cargo version
