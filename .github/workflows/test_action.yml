@@ -79,7 +79,7 @@ jobs:
         uses: ./
         with:
           toolchain-file: ${{ steps.toolchain-arg.outputs.toolchain }}
-          components: ${{ join(fromJson(steps.test-info.outputs.info).components) }}
+          components: ${{ fromJson(steps.test-info.outputs.info).components }}
       
       # check cargo version
       - name: get cargo version 

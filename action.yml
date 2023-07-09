@@ -66,9 +66,9 @@ runs:
       run: |
         # Init Variables
         targets_files=${{ join(fromJson(steps.parse-toml.outputs.json-output).toolchain.targets) }}
-        targets_inputs=${{ inputs.targets }}
+        targets_inputs="${{ inputs.targets }}"
         components_files=${{ join(fromJson(steps.parse-toml.outputs.json-output).toolchain.components) }}
-        components_inputs=${{ inputs.components }}
+        components_inputs="${{ inputs.components }}"
 
         # Define a function to join two lists
         function join_lists() {
