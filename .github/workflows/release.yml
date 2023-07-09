@@ -20,4 +20,4 @@ jobs:
       - name: Generate release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: npx -s -p semantic-release-major-tag -p semantic-release semantic-release
